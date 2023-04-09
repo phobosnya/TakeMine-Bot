@@ -404,7 +404,7 @@ async def process_sum(message: types.Message, state: FSMContext):
             "currency": "TAKE",
             "description": "Pay check for {float(message.text)} TAKE",
             "hiddenMessage": "{message.from_user.id}",
-            "callbackUrl": "https://t.me/ton_rocket",
+            "callbackUrl": "https://t.me/tontakemc_bot",
             "payload": "some custom payload I want to see in webhook or when I request invoice",
             "expiredIn": 900
         {"}"}'''
