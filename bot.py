@@ -27,6 +27,9 @@ class Form(StatesGroup):
     minenickvip = State()
     minenickprim = State()
     minenickpir = State()
+    screensum = State()
+    uid = State()
+    sumstate = State()
 
 @dp.message_handler(commands=['start', 'help'])
 async def welcome_handler(message: types.Message):
@@ -39,9 +42,11 @@ async def welcome_handler(message: types.Message):
     keyboard.row(KeyboardButton('Баланс'), KeyboardButton('Киты'))
     await message.answer('''***Приветствую!***
 Я - телеграм бот, созданный для покупки доната на сервере ***TonTake*** и для вывода заработанной криптовалюты на нем.
-Нажмите __*Наборы*__, чтобы открыть наборы, доступные для покупки.
+Нажмите __*Киты*__, чтобы открыть наборы, доступные для покупки.
 Нажмите __*Пополнить*__, чтобы положить TAKE на свой счет.
-Нажмите __Вывод__, чтобы вывести TAKE на ton-rocket кошелек.''',
+Нажмите __Вывод__, чтобы вывести TAKE на ton-rocket кошелек.
+Для отмены любого действия напишите /cancel.
+Удачной игры!''',
                          reply_markup=keyboard,
                          parse_mode=ParseMode.MARKDOWN)
 
@@ -66,7 +71,7 @@ async def process_withdraw(callback: types.CallbackQuery):
     await bot.delete_message(callback.from_user.id, callback.message.message_id)
     global code
     code = ''.join(random.choice(string.ascii_uppercase + string.digits + string.ascii_lowercase) for _ in range(8))
-    await bot.send_photo(callback.from_user.id, "https://imageup.ru/img268/4284910/screenshot_1.png", f"Пришлите скриншот подобного формата, введя в чат сумму и следующий код через запятую: {code} \nТакже не забудьте зажать таб!")
+    await bot.send_photo(callback.from_user.id, "https://imageup.ru/img268/4284910/screenshot_1.png", f"Пришлите скриншот подобного формата, введя в чат сумму и следующий код через запятую: {code} \nТакже не забудьте зажать таб!\nУчтите, что 100 внутриигровых TAKE = 1 TAKE в боте.")
     await Form.withservamount.set()
 
 @dp.message_handler(state = Form.withservamount, content_types=['photo', 'text'])
@@ -76,17 +81,55 @@ async def process_sum(message: types.Message, state: FSMContext):
         await state.finish()
     elif not message.text:
         global code
-        await message.forward(915248897)
-        await bot.send_message(915248897, f'''Запрос на вывод средств
+        await message.forward(5602124939)
+        kb = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton(text = "Подтвердить", callback_data="proceed"), InlineKeyboardButton(text = "Отклонить", callback_data="decline"))
+        await bot.send_message(5602124939, f'''Запрос на вывод средств
 Данные о юзере:
 Код: {code}
 Баланс: {db.get_balance(message.from_user.id)} TAKE
 id: `{message.from_user.id}`
-{f"Тег:@{message.from_user.username}" if message.from_user.username else ""}''', parse_mode=ParseMode.MARKDOWN)
+{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
         await message.answer("Запрос на вывод успешно отправлен, ждите обработки втечение 12 часов.")
         await state.finish()
     else:
-        await message.answer("Пришлите фото.")
+        await message.answer("Пришлите фото. Или напишите /cancel для отмены.")
+
+@dp.callback_query_handler(text = "proceed")
+async def process_proceedure(callback: types.CallbackQuery, state: FSMContext):
+    lines = callback.message.text.split('\n')
+    uid = lines[4].split(': ')[1]
+    await callback.message.edit_text(f'''***ПОДТВЕРЖДЕНО***
+{callback.message.text}''', parse_mode=ParseMode.MARKDOWN)
+    await bot.send_message(callback.from_user.id, "Введите сумму вывода на скрине")
+    await Form.uid.set()
+    await state.set_data(uid)
+
+@dp.message_handler(state = Form.uid)
+async def process_withserv(message:types.Message, state:FSMContext):
+    valid = False
+    try:
+        float(message.text)
+        valid = True
+    except:
+        pass
+    if valid and float(message.text)>0 and float(message.text):
+        uid = await state.get_data()
+        db.add_balance(uid, float(message.text))
+        await bot.send_message(uid, 'Вывод принят!\n'
+                                      f'*+{message.text} TAKE*',
+                                      parse_mode=ParseMode.MARKDOWN)
+        await message.answer(f'''Вы успешно вывели ***{message.text} TAKE*** на счет пользователя!''', parse_mode=ParseMode.MARKDOWN)
+        await state.finish()
+    else:
+        await message.answer('***Некорректные данные.*** Попробуйте еще раз...', parse_mode=ParseMode.MARKDOWN)
+
+@dp.callback_query_handler(text = "decline")
+async def process_decline(callback: types.CallbackQuery):
+    lines = callback.message.text.split('\n')
+    uid = lines[4].split(': ')[1]
+    await bot.send_message(int(uid), "Ваш запрос на вывод средств был отклонен, попробуйте еще раз.\nВы также можете связаться с поддержкой: @TonTakeHelp")
+    await callback.message.edit_text(f'''***ОТКЛОНЕНО***
+{callback.message.text}''', parse_mode=ParseMode.MARKDOWN)
 
 @dp.callback_query_handler(text = "withbot")
 async def process_withdraw(callback: types.CallbackQuery):
@@ -136,13 +179,6 @@ async def process_sum(message: types.Message, state: FSMContext):
     else:
         await message.answer('***Некорректные данные.*** Попробуйте еще раз...', parse_mode=ParseMode.MARKDOWN)
 
-@dp.message_handler(commands='deposit', state='*')
-@dp.message_handler(Text(equals='Пополнить', ignore_case=True),state='*')
-async def deposit_handler(message: types.Message, state: FSMContext):
-    await state.finish()
-    await message.answer("***Введите сумму пополнения...***", parse_mode=ParseMode.MARKDOWN)
-    await Form.amount.set()
-
 @dp.message_handler(commands="kits", state = "*")
 @dp.message_handler(Text(equals='Киты', ignore_case=True), state = '*')
 async def kit_packs(message: types.Message, state:FSMContext):
@@ -181,12 +217,12 @@ async def proccess_nick(message: types.Message, state: FSMContext):
         await message.reply("***Операция отменена***", parse_mode=ParseMode.MARKDOWN)
         await state.finish()
     elif len(message.text) > 3:
-        await bot.send_message(915248897, f'''Запрос на покупку набора VIP
+        await bot.send_message(5602124939, f'''Запрос на покупку набора VIP
 Данные о юзере:
 Баланс: {db.get_balance(message.from_user.id)} TAKE
 MC Nickname: {message.text}
 id: `{message.from_user.id}`
-{f"Тег:@{message.from_user.username}" if message.from_user.username else ""}''', parse_mode=ParseMode.MARKDOWN)
+{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', parse_mode=ParseMode.MARKDOWN)
         db.decrease_balance(message.from_user.id, 2)
         await message.answer("Запрос на получение привилегии успешно отправлен.\nПривилегия активируется в течении 12 часов.\nСпасибо за покупку!")
         await state.finish()
@@ -228,12 +264,12 @@ async def proccess_nick(message: types.Message, state: FSMContext):
         await message.reply("***Операция отменена***", parse_mode=ParseMode.MARKDOWN)
         await state.finish()
     elif len(message.text) > 3:
-        await bot.send_message(915248897, f'''Запрос на покупку набора PRIMAL
+        await bot.send_message(5602124939, f'''Запрос на покупку набора PRIMAL
 Данные о юзере:
 Баланс: {db.get_balance(message.from_user.id)} TAKE
 MC Nickname: {message.text}
 id: `{message.from_user.id}`
-{f"Тег:@{message.from_user.username}" if message.from_user.username else ""}''', parse_mode=ParseMode.MARKDOWN)
+{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', parse_mode=ParseMode.MARKDOWN)
         db.decrease_balance(message.from_user.id, 5)
         await message.answer("Запрос на получение привилегии успешно отправлен.\nПривилегия активируется в течении 12 часов.\nСпасибо за покупку!")
         await state.finish()
@@ -272,17 +308,77 @@ async def proccess_nick(message: types.Message, state: FSMContext):
         await message.reply("***Операция отменена***", parse_mode=ParseMode.MARKDOWN)
         await state.finish()
     elif len(message.text) > 3:
-        await bot.send_message(915248897, f'''Запрос на покупку набора PIRATE
+        await bot.send_message(5602124939, f'''Запрос на покупку набора PIRATE
 Данные о юзере:
 Баланс: {db.get_balance(message.from_user.id)} TAKE
 MC Nickname: {message.text}
 id: `{message.from_user.id}`
-{f"Тег:@{message.from_user.username}" if message.from_user.username else ""}''', parse_mode=ParseMode.MARKDOWN)
+{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', parse_mode=ParseMode.MARKDOWN)
         db.decrease_balance(message.from_user.id, 13)
         await message.answer("Запрос на получение привилегии успешно отправлен.\nПривилегия активируется в течении 12 часов.\nСпасибо за покупку!")
         await state.finish()
     else:
         await message.answer("Некорректные данные... Никнейм должен быть длиннее.")
+
+@dp.message_handler(commands='deposit', state='*')
+@dp.message_handler(Text(equals='Пополнить', ignore_case=True),state='*')
+async def deposit_handler(message: types.Message, state: FSMContext):
+    await state.finish()
+    kb = InlineKeyboardMarkup(row_width=2).add(InlineKeyboardButton(text = "Баланс бота", callback_data="botpoc"), InlineKeyboardButton(text = "Баланс сервера", callback_data="servpoc"))
+    await message.answer("Выберите баланс", reply_markup=kb)
+
+@dp.callback_query_handler(text = "servpoc")
+async def proc(callback: types.CallbackQuery):
+    await callback.message.delete()
+    await bot.send_message(callback.from_user.id, "***Введите сумму пополнения и точный ник в майнкрафте через запятую, по порядку 0.5, TMPhobos***\nУчтите, что минимальная сумма пополнения 0.5 TAKE", parse_mode=ParseMode.MARKDOWN)
+    await Form.sumstate.set()
+
+@dp.message_handler(state = Form.sumstate)
+async def procstate(message: types.Message, state: FSMContext):
+    if message.text == "/cancel":
+        await message.answer("***Пополнение отменено.***", parse_mode=ParseMode.MARKDOWN)
+        await state.finish()
+    else:
+        try:
+            if message.text.find(","):
+                data = message.text.split(",")
+                if float(data[0])>=0.5:
+                    if float(data[0])<=db.get_balance(message.from_user.id):
+                        if len(data[1].replace(" ", '', 1)) >= 3:
+                            kb = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton(text = "Подтвердить выполнение", callback_data="procproced"))
+                            await bot.send_message(5602124939, f'''Запрос на пополнение средств на сервере
+Данные о юзере:
+Сумма пополнения: {data[0]}
+Баланс: {db.get_balance(message.from_user.id)} TAKE
+MC Nickname: {data[1]}
+id: `{message.from_user.id}`
+{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+                            db.decrease_balance(message.from_user.id, float(data[0]))
+                            await message.answer(f"Запрос на пополнение счета отправлен, ждите пополнения втечение 12 часов.\nВ противном случае обратитесь в поддержку: @TonTakeHelp, указав ваш айди: `{message.from_user.id}` и описав проблему.\nУдачи!", parse_mode=ParseMode.MARKDOWN)
+                        else:
+                            await message.answer("***Слишком короткий ник, попробуйте еще раз***", parse_mode=ParseMode.MARKDOWN)
+                    else:
+                        await message.answer("***Недостаточно средств.***", parse_mode=ParseMode.MARKDOWN)
+                        await state.finish()
+                else:
+                    await message.answer("***Минимальная сумма пополнения - 0.5 TAKE. Попробуйте еще раз.***", parse_mode=ParseMode.MARKDOWN)
+        except:
+            await message.answer("***Некорректные данные, введите ник и сумму по порядку 0.5, TMPhobos***", parse_mode=ParseMode.MARKDOWN)
+
+@dp.callback_query_handler(text = "procproced")
+async def proc(callback: types.CallbackQuery):
+    await callback.message.edit_text(f"ВЫПОЛНЕНО\n{callback.message.text}")
+    lines = callback.message.text.split('\n')
+    uid = lines[5].split(': ')[1]
+    balance = lines[2].split(': ')[1]
+    nick = lines[4].split(': ')[1]
+    await bot.send_message(uid, f"Ваш баланс на сервере(Ник: ***{nick}***) был пополнен на сумму ***{balance} TAKE***.\nПотратьте с умом!", parse_mode=ParseMode.MARKDOWN)
+
+@dp.callback_query_handler(text = "botpoc")
+async def proc(callback: types.CallbackQuery):
+    await callback.message.delete()
+    await bot.send_message(callback.from_user.id, "***Введите сумму пополнения...***", parse_mode=ParseMode.MARKDOWN)
+    await Form.amount.set()
 
 @dp.message_handler(state=Form.amount)
 async def process_sum(message: types.Message, state: FSMContext):
