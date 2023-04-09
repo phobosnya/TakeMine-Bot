@@ -44,7 +44,7 @@ async def welcome_handler(message: types.Message):
 Я - телеграм бот, созданный для покупки доната на сервере ***TonTake*** и для вывода заработанной криптовалюты на нем.
 Нажмите __*Киты*__, чтобы открыть наборы, доступные для покупки.
 Нажмите __*Пополнить*__, чтобы положить TAKE на свой счет.
-Нажмите __Вывод__, чтобы вывести TAKE на ton-rocket кошелек.
+Нажмите __*Вывод*__, чтобы вывести TAKE на @tonRocketBot кошелек.
 Для отмены любого действия напишите /cancel.
 Удачной игры!''',
                          reply_markup=keyboard,
@@ -71,15 +71,15 @@ async def process_withdraw(callback: types.CallbackQuery):
     await bot.delete_message(callback.from_user.id, callback.message.message_id)
     global code
     code = ''.join(random.choice(string.ascii_uppercase + string.digits + string.ascii_lowercase) for _ in range(8))
-    await bot.send_photo(callback.from_user.id, "https://imageup.ru/img268/4284910/screenshot_1.png", f"Пришлите скриншот подобного формата, введя в чат сумму и следующий код через запятую: {code} \nТакже не забудьте зажать таб!\nУчтите, что 100 внутриигровых TAKE = 1 TAKE в боте.")
+    await bot.send_photo(callback.from_user.id, "https://imageup.ru/img268/4284910/screenshot_1.png", f"Пришлите скриншот подобного формата, введя в чат сумму и следующий код через запятую: {code} \nТакже зажмите TAB, чтобы был виден ваш баланс!\nУчтите, что 100 внутриигровых TAKE = 1 настоящий TAKE в боте.")
     await Form.withservamount.set()
 
-@dp.message_handler(state = Form.withservamount, content_types=['photo', 'text'])
+@dp.message_handler(state = Form.withservamount, content_types=['photo', 'text', 'video', 'document'])
 async def process_sum(message: types.Message, state: FSMContext):
     if message.text == "/cancel":
         await message.answer("Вывод отменен...")
         await state.finish()
-    elif not message.text:
+    elif message.photo:
         global code
         await message.forward(5602124939)
         kb = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton(text = "Подтвердить", callback_data="proceed"), InlineKeyboardButton(text = "Отклонить", callback_data="decline"))
