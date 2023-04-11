@@ -67,12 +67,12 @@ async def withdraw_handler(message: types.Message, state: FSMContext):
     await message.answer("Выберите, откуда хотите вывести TAKE:", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
 
 @dp.callback_query_handler(text = "withserv")
-async def process_withdraw(callback: types.CallbackQuery):
+async def process_withdraw(callback: types.CallbackQuery, state: FSMContext):
     await bot.delete_message(callback.from_user.id, callback.message.message_id)
-    global code
     code = ''.join(random.choice(string.ascii_uppercase + string.digits + string.ascii_lowercase) for _ in range(8))
     await bot.send_photo(callback.from_user.id, "https://imageup.ru/img268/4284910/screenshot_1.png", f"Пришлите скриншот подобного формата, введя в чат сумму и следующий код через запятую: {code} \nТакже зажмите TAB, чтобы был виден ваш баланс!\nУчтите, что 100 внутриигровых TAKE = 1 настоящий TAKE в боте.")
     await Form.withservamount.set()
+    await state.set_data(code)
 
 @dp.message_handler(state = Form.withservamount, content_types=['photo', 'text', 'video', 'document'])
 async def process_sum(message: types.Message, state: FSMContext):
@@ -80,12 +80,11 @@ async def process_sum(message: types.Message, state: FSMContext):
         await message.answer("Вывод отменен...")
         await state.finish()
     elif message.photo:
-        global code
         await message.forward(5602124939)
         kb = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton(text = "Подтвердить", callback_data="proceed"), InlineKeyboardButton(text = "Отклонить", callback_data="decline"))
         await bot.send_message(5602124939, f'''Запрос на вывод средств
 Данные о юзере:
-Код: {code}
+Код: {await state.get_data()}
 Баланс: {db.get_balance(message.from_user.id)} TAKE
 id: `{message.from_user.id}`
 {f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
