@@ -86,8 +86,8 @@ async def process_sum(message: types.Message, state: FSMContext):
 Данные о юзере:
 Код: {await state.get_data()}
 Баланс: {db.get_balance(message.from_user.id)} TAKE
-id: `{message.from_user.id}`
-{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+id: {message.from_user.id}
+{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', reply_markup=kb)
         await message.answer("Запрос на вывод успешно отправлен, ждите обработки втечение 12 часов.")
         await state.finish()
     else:
@@ -98,7 +98,7 @@ async def process_proceedure(callback: types.CallbackQuery, state: FSMContext):
     lines = callback.message.text.split('\n')
     uid = lines[4].split(': ')[1]
     await callback.message.edit_text(f'''***ПОДТВЕРЖДЕНО***
-{callback.message.text}''', parse_mode=ParseMode.MARKDOWN)
+{callback.message.text}''')
     await bot.send_message(callback.from_user.id, "Введите сумму вывода на скрине")
     await Form.uid.set()
     await state.set_data(uid)
@@ -128,7 +128,7 @@ async def process_decline(callback: types.CallbackQuery):
     uid = lines[4].split(': ')[1]
     await bot.send_message(int(uid), "Ваш запрос на вывод средств был отклонен, попробуйте еще раз.\nВы также можете связаться с поддержкой: @TonTakeHelp")
     await callback.message.edit_text(f'''***ОТКЛОНЕНО***
-{callback.message.text}''', parse_mode=ParseMode.MARKDOWN)
+{callback.message.text}''')
 
 @dp.callback_query_handler(text = "withbot")
 async def process_withdraw(callback: types.CallbackQuery):
@@ -189,19 +189,20 @@ async def kit_packs(message: types.Message, state:FSMContext):
 async def vip_hand(callback: types.CallbackQuery):
     kb = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton(text = "Купить", callback_data="buyvip"))
     await bot.send_photo(callback.from_user.id, "https://imageup.ru/img96/4284166/photo_2023-04-08_18-26-39.jpg", '''**VIP**
-Перезарядка набора: ***7 дней***
-Стоимость привелегии: ***2 TAKE***
+Стоимость привелегии: ***1 TAKE***
 Дополнительные возможности:
-***Префикс***''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+***Префикс***
+Привилегию вы получаете ***НАВСЕГДА***
+Получать набор который соответствует привелегии + все наборы ниже рангом можно неограниченное колличество раз. Получить набор вы можете с помощью команды /kit vip. Этот набор можете активировать раз в 7 дней''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
 
 @dp.callback_query_handler(text = "buyvip")
 async def confirmation(callback: types.CallbackQuery):
     kb = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton(text = "Подтверждаю", callback_data="confvip"))
-    await bot.send_message(callback.from_user.id, "Вы точно хотите купить набор ***VIP*** за ***2 TAKE***?", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+    await bot.send_message(callback.from_user.id, "Вы точно хотите купить набор ***VIP*** за ***1 TAKE***?", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
 
 @dp.callback_query_handler(text = "confvip")
 async def payment(callback: types.CallbackQuery):
-    if db.get_balance(callback.from_user.id) >= 2:
+    if db.get_balance(callback.from_user.id) >= 1:
         await bot.send_message(callback.from_user.id, '''Отлично!
 Прежде чем отправить запрос на получение привилегии, введите свой никнейм в майнкрафте
 Предупреждение:
@@ -220,9 +221,9 @@ async def proccess_nick(message: types.Message, state: FSMContext):
 Данные о юзере:
 Баланс: {db.get_balance(message.from_user.id)} TAKE
 MC Nickname: {message.text}
-id: `{message.from_user.id}`
-{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', parse_mode=ParseMode.MARKDOWN)
-        db.decrease_balance(message.from_user.id, 2)
+id: {message.from_user.id}
+{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''')
+        db.decrease_balance(message.from_user.id, 1)
         await message.answer("Запрос на получение привилегии успешно отправлен.\nПривилегия активируется в течении 12 часов.\nСпасибо за покупку!")
         await state.finish()
     else:
@@ -232,23 +233,24 @@ id: `{message.from_user.id}`
 async def pri_hand(callback: types.CallbackQuery):
     kb = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton(text = "Купить", callback_data="buyprim"))
     await bot.send_photo(callback.from_user.id, "https://imageup.ru/img291/4284180/photo_2023-04-08_17-00-23.jpg", '''**PRIMAL**
-Перезарядка: ***21 день***
-Стоимость: ***5 TAKE***
+Стоимость: ***2.5 TAKE***
 ***Шлем - Защита 1; Подводное дыхание 1
 Нагрудник, поножи, ботинки - Защита 2
 Лук: Бесконечность***
 Возможности:
 ***Префикс***
-Команды: ***/rtp***''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
-    
+Команды: ***/rtp***
+Привилегию вы получаете ***НАВСЕГДА***
+Получать набор который соответствует привелегии + все наборы ниже рангом можно неограниченное колличество раз. Получить набор вы можете с помощью команды /kit primal. Этот набор можете активировать раз в 14 дней''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+
 @dp.callback_query_handler(text = "buyprim")
 async def confirmation(callback: types.CallbackQuery):
     kb = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton(text = "Подтверждаю", callback_data="confprim"))
-    await bot.send_message(callback.from_user.id, "Вы точно хотите купить набор ***PRIMAL*** за ***5 TAKE***?", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+    await bot.send_message(callback.from_user.id, "Вы точно хотите купить набор ***PRIMAL*** за ***2.5 TAKE***?", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
 
 @dp.callback_query_handler(text = "confprim")
 async def payment(callback: types.CallbackQuery):
-    if db.get_balance(callback.from_user.id) >= 5:
+    if db.get_balance(callback.from_user.id) >= 2.5:
         await bot.send_message(callback.from_user.id, '''Отлично!
 Прежде чем отправить запрос на получение привилегии, введите свой никнейм в майнкрафте
 Предупреждение:
@@ -267,9 +269,9 @@ async def proccess_nick(message: types.Message, state: FSMContext):
 Данные о юзере:
 Баланс: {db.get_balance(message.from_user.id)} TAKE
 MC Nickname: {message.text}
-id: `{message.from_user.id}`
-{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', parse_mode=ParseMode.MARKDOWN)
-        db.decrease_balance(message.from_user.id, 5)
+id: {message.from_user.id}
+{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''')
+        db.decrease_balance(message.from_user.id, 2.5)
         await message.answer("Запрос на получение привилегии успешно отправлен.\nПривилегия активируется в течении 12 часов.\nСпасибо за покупку!")
         await state.finish()
     else:
@@ -279,20 +281,21 @@ id: `{message.from_user.id}`
 async def pir_hand(callback: types.CallbackQuery):
     kb = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton(text = "Купить", callback_data="buypirate"))
     await bot.send_photo(callback.from_user.id, "https://imageup.ru/img211/4284186/photo_2023-04-08_17-18-49.jpg", '''**PIRATE**
-Стоимость: ***13 TAKE***
-Перезарядка набора: ***14 дней***
+Стоимость: ***4 TAKE***
 Зачарования: ***лучшие!***
 Привелегии:
-***/rtp; /rg claim(300блоков); Награды за квесты пирата удваиваются (добавляется финальный квест на 1 TAKE)***''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+***/rtp; Награды за квесты пирата удваиваются (добавляется финальный квест на 1 TAKE)***
+Привилегию вы получаете ***НАВСЕГДА***
+Получать набор который соответствует привелегии + все наборы ниже рангом можно неограниченное колличество раз. Получить набор вы можете с помощью команды /kit пират. Этот набор можете активировать раз в 14 дней''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
 
 @dp.callback_query_handler(text = "buypirate")
 async def confirmation(callback: types.CallbackQuery):
     kb = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton(text = "Подтверждаю", callback_data="confpirate"))
-    await bot.send_message(callback.from_user.id, "Вы точно хотите купить набор ***PIRATE*** за ***13 TAKE***?", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+    await bot.send_message(callback.from_user.id, "Вы точно хотите купить набор ***PIRATE*** за ***4 TAKE***?", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
 
 @dp.callback_query_handler(text = "confpirate")
 async def payment(callback: types.CallbackQuery):
-    if db.get_balance(callback.from_user.id) >= 13:
+    if db.get_balance(callback.from_user.id) >= 4:
         await bot.send_message(callback.from_user.id, '''Отлично!
 Прежде чем отправить запрос на получение привилегии, введите свой никнейм в майнкрафте
 Предупреждение:
@@ -311,9 +314,9 @@ async def proccess_nick(message: types.Message, state: FSMContext):
 Данные о юзере:
 Баланс: {db.get_balance(message.from_user.id)} TAKE
 MC Nickname: {message.text}
-id: `{message.from_user.id}`
-{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', parse_mode=ParseMode.MARKDOWN)
-        db.decrease_balance(message.from_user.id, 13)
+id: {message.from_user.id}
+{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''')
+        db.decrease_balance(message.from_user.id, 4)
         await message.answer("Запрос на получение привилегии успешно отправлен.\nПривилегия активируется в течении 12 часов.\nСпасибо за покупку!")
         await state.finish()
     else:
@@ -340,7 +343,7 @@ async def procstate(message: types.Message, state: FSMContext):
     else:
         try:
             if message.text.find(","):
-                data = message.text.split(",")
+                data = message.text.split(",", 1)
                 if float(data[0])>=0.5:
                     if float(data[0])<=db.get_balance(message.from_user.id):
                         if len(data[1].replace(" ", '', 1)) >= 3:
@@ -349,9 +352,9 @@ async def procstate(message: types.Message, state: FSMContext):
 Данные о юзере:
 Сумма пополнения: {data[0]}
 Баланс: {db.get_balance(message.from_user.id)} TAKE
-MC Nickname: {data[1]}
-id: `{message.from_user.id}`
-{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+MC Nickname:{data[1]}
+id: {message.from_user.id}
+{f"Тег: @{message.from_user.username}" if message.from_user.username else ""}''', reply_markup=kb)
                             db.decrease_balance(message.from_user.id, float(data[0]))
                             await message.answer(f"Запрос на пополнение счета отправлен, ждите пополнения втечение 12 часов.\nВ противном случае обратитесь в поддержку: @TonTakeHelp, указав ваш айди: `{message.from_user.id}` и описав проблему.\nУдачи!", parse_mode=ParseMode.MARKDOWN)
                         else:

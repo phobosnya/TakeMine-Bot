@@ -28,10 +28,7 @@ async def start():
             elif tx['status'] == "paid":
                 requests.delete(f"https://pay.ton-rocket.com/tg-invoices/{tx['id']}", headers=headers,)
                 value = float(tx['amount'])
-                uid = tx["hiddenMessage"]
-                if not uid.isdigit():
-                    continue
-                uid = int(uid)
+                uid = int(tx["hiddenMessage"])
                 if not db.check_user(uid):
                     continue
                 db.add_balance(uid, value)
