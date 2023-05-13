@@ -53,6 +53,8 @@ async def welcome_handler(message: types.Message):
 @dp.message_handler(commands='balance',state='*')
 @dp.message_handler(Text(equals='Баланс', ignore_case=True),state='*')
 async def balance_handler(message: types.Message, state: FSMContext):
+    if not db.check_user(message.from_user.id):
+        db.add_user(message.from_user.id)
     await state.finish()
     uid = message.from_user.id
     user_balance = db.get_balance(uid)
@@ -62,6 +64,8 @@ async def balance_handler(message: types.Message, state: FSMContext):
 @dp.message_handler(commands='withdraw', state='*')
 @dp.message_handler(Text(equals='Вывод', ignore_case=True),state='*')
 async def withdraw_handler(message: types.Message, state: FSMContext):
+    if not db.check_user(message.from_user.id):
+        db.add_user(message.from_user.id)
     await state.finish()
     kb = InlineKeyboardMarkup(row_width=2).add(InlineKeyboardButton(text = "Баланс бота", callback_data="withbot"), InlineKeyboardButton(text = "Баланс сервера", callback_data="withserv"))
     await message.answer("Выберите, откуда хотите вывести TAKE:", reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
@@ -164,12 +168,12 @@ async def process_sum(message: types.Message, state: FSMContext):
         print(data)
         #data = f"{data}".encode()
         rept = requests.post(url, data=data, headers = headers)
-        db.decrease_balance(message.from_user.id, float(message.text))
         req = rept.json()
         print(req)
         if req['success'] == False:
             await message.answer("Возникли неполадки при выводе, попробуйте позже...")
         else:
+            db.decrease_balance(message.from_user.id, float(message.text))
             await message.answer(f'''Вы успешно вывели ***{message.text} TAKE*** с вашего счета!''', parse_mode=ParseMode.MARKDOWN)
         await state.finish()
     elif float(message.text) > db.get_balance(message.from_user.id):
@@ -181,6 +185,8 @@ async def process_sum(message: types.Message, state: FSMContext):
 @dp.message_handler(commands="kits", state = "*")
 @dp.message_handler(Text(equals='Киты', ignore_case=True), state = '*')
 async def kit_packs(message: types.Message, state:FSMContext):
+    if not db.check_user(message.from_user.id):
+        db.add_user(message.from_user.id)
     await state.finish()
     kb = InlineKeyboardMarkup(row_width = 2).add(InlineKeyboardButton(text = "VIP", callback_data="VIP"), InlineKeyboardButton(text = "PRIMAL", callback_data="PRIMAL"), InlineKeyboardButton(text = "PIRATE", callback_data="PIRATE"))
     await message.answer("Выберите один из доступных наборов:", reply_markup=kb)
@@ -325,6 +331,8 @@ id: {message.from_user.id}
 @dp.message_handler(commands='deposit', state='*')
 @dp.message_handler(Text(equals='Пополнить', ignore_case=True),state='*')
 async def deposit_handler(message: types.Message, state: FSMContext):
+    if not db.check_user(message.from_user.id):
+        db.add_user(message.from_user.id)
     await state.finish()
     kb = InlineKeyboardMarkup(row_width=2).add(InlineKeyboardButton(text = "Баланс бота", callback_data="botpoc"), InlineKeyboardButton(text = "Баланс сервера", callback_data="servpoc"))
     await message.answer("Выберите баланс", reply_markup=kb)
